@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#F7F9F4">
+
+    <!-- Screen headinf -->
+    <TextView
+        android:id="@+id/txtRecipesTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Suggested Recipes"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#245C3A"
+        android:gravity="center"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Screen description -->
+    <TextView
+        android:id="@+id/txtRecipesDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dicover meals you can prepair using ingredients already in your pantry"
+        android:textSize="14sp"
+        android:textColor="#555555"
+        android:gravity="center"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Section heading -->
+    <TextView
+        android:id="@+id/txtAvailableRecipes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Recipes for YOU"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Recipe list -->
+    <ListView
+        android:id="@+id/listViewRecipes"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="#DDDDDD"
+        android:dividerHeight="1dp"
+        android:padding="4dp"/>
+
+    <Button
+        android:id="@+id/btnBackToPantry"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Back to Pantry"
+        android:textAllCaps="false"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#245C3A"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>

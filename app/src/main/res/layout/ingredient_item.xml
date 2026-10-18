@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_marginBottom="10dp"
+    android:backgroundTint="#FFFFFF"
+    android:background="@drawable/ingredient_card_background">
+
+    <TextView
+        android:id="@+id/txtIngredientName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ingredient Name"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#205C3B"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/txtIngredientQuantity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Quantity"
+        android:textSize="15sp"
+        android:textColor="#333333"
+        android:layout_marginBottom="6dp"/>
+
+    <TextView
+        android:id="@+id/txtIngredientExpiry"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Expiry Date"
+        android:textSize="14sp"
+        android:textColor="#666666"/>
+
+</LinearLayout>

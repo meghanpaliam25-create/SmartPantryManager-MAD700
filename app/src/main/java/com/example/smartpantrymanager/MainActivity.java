@@ -1,16 +1,24 @@
 
 package com.example.smartpantrymanager;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.os.Build;
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
+import android.view.Menu;
+import android.view.MenuItem;
 
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 
@@ -21,53 +29,82 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<String> ingredientList;
     private ArrayList<Long> ingredientIds;
-    private ArrayAdapter<String> ingredientAdapter;
+    private IngredientAdapter ingredientAdapter;
 
     private Button btnAddIngredient;
     private Button btnSuggestedRecipes;
     private Button btnSettings;
+
+    private ActivityResultLauncher<String> notificationPermissionLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Connect XML components
-        listViewIngredients =
-                findViewById(R.id.listViewIngredients);
+        listViewIngredients = findViewById(R.id.listViewIngredients);
+        btnAddIngredient = findViewById(R.id.btnAddIngredient);
+        btnSuggestedRecipes = findViewById(R.id.btnSuggestedRecipes);
+        btnSettings = findViewById(R.id.btnSettings);
 
-        btnAddIngredient =
-                findViewById(R.id.btnAddIngredient);
-
-        btnSuggestedRecipes =
-                findViewById(R.id.btnSuggestedRecipes);
-
-        btnSettings =
-                findViewById(R.id.btnSettings);
-
-        // Initialize SQLite database
         databaseHelper = new DatabaseHelper(this);
 
-        // Initialize ingredient lists
         ingredientList = new ArrayList<>();
         ingredientIds = new ArrayList<>();
 
-        ingredientAdapter = new ArrayAdapter<>(
+        // Connect the custom ingredient card adapter
+        ingredientAdapter = new IngredientAdapter(
                 this,
-                android.R.layout.simple_list_item_1,
                 ingredientList
         );
 
         listViewIngredients.setAdapter(ingredientAdapter);
 
-        // Add Ingredient button
-        btnAddIngredient.setOnClickListener(v -> {
+        notificationPermissionLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.RequestPermission(),
+                        isGranted -> {
+                            if (!isGranted) {
+                                Toast.makeText(
+                                        this,
+                                        "Notifications are disabled. You can enable them in Android Settings.",
+                                        Toast.LENGTH_LONG
+                                ).show();
+                            }
+                        }
+                );
 
+        requestNotificationPermission();
+
+        // Schedule automatic expiry checks
+        ExpiryReminderScheduler.scheduleExpiryReminders(
+                getApplicationContext()
+        );
+
+        // Add Ingredient
+        btnAddIngredient.setOnClickListener(v -> {
             Intent intent = new Intent(
                     MainActivity.this,
                     AddEditIngredientActivity.class
             );
+            startActivity(intent);
+        });
 
+        // Suggested Recipes
+        btnSuggestedRecipes.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    SuggestedRecipesActivity.class
+            );
+            startActivity(intent);
+        });
+
+        // Settings
+        btnSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    SettingsActivity.class
+            );
             startActivity(intent);
         });
 
@@ -76,14 +113,27 @@ public class MainActivity extends AppCompatActivity {
                 (parent, view, position, id) -> {
 
                     if (position < ingredientIds.size()) {
-
-                        long ingredientId =
-                                ingredientIds.get(position);
-
+                        long ingredientId = ingredientIds.get(position);
                         showIngredientOptions(ingredientId);
                     }
                 }
         );
+    }
+
+    private void requestNotificationPermission() {
+
+        if (Build.VERSION.SDK_INT >= 33) {
+
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED) {
+
+                notificationPermissionLauncher.launch(
+                        Manifest.permission.POST_NOTIFICATIONS
+                );
+            }
+        }
     }
 
     @Override
@@ -92,55 +142,33 @@ public class MainActivity extends AppCompatActivity {
         loadIngredients();
     }
 
-    // Load all saved ingredients from SQLite
+    // Load saved pantry ingredients from SQLite
     private void loadIngredients() {
 
         ingredientList.clear();
         ingredientIds.clear();
 
-        try (Cursor cursor =
-                     databaseHelper.getAllIngredients()) {
+        try (Cursor cursor = databaseHelper.getAllIngredients()) {
 
-            int idIndex =
-                    cursor.getColumnIndexOrThrow("id");
-
-            int nameIndex =
-                    cursor.getColumnIndexOrThrow("name");
-
-            int quantityIndex =
-                    cursor.getColumnIndexOrThrow("quantity");
-
-            int unitIndex =
-                    cursor.getColumnIndexOrThrow("unit");
-
-            int expiryIndex =
-                    cursor.getColumnIndexOrThrow("expiry_date");
+            int idIndex = cursor.getColumnIndexOrThrow("id");
+            int nameIndex = cursor.getColumnIndexOrThrow("name");
+            int quantityIndex = cursor.getColumnIndexOrThrow("quantity");
+            int unitIndex = cursor.getColumnIndexOrThrow("unit");
+            int expiryIndex = cursor.getColumnIndexOrThrow("expiry_date");
 
             while (cursor.moveToNext()) {
 
                 long id = cursor.getLong(idIndex);
-
-                String name =
-                        cursor.getString(nameIndex);
-
-                double quantity =
-                        cursor.getDouble(quantityIndex);
-
-                String unit =
-                        cursor.getString(unitIndex);
-
-                String expiryDate =
-                        cursor.getString(expiryIndex);
+                String name = cursor.getString(nameIndex);
+                double quantity = cursor.getDouble(quantityIndex);
+                String unit = cursor.getString(unitIndex);
+                String expiryDate = cursor.getString(expiryIndex);
 
                 String ingredientInfo =
-                        name + "\nQuantity: " +
-                                quantity + " " + unit;
+                        name + "\nQuantity: " + quantity + " " + unit;
 
-                if (expiryDate != null &&
-                        !expiryDate.isEmpty()) {
-
-                    ingredientInfo +=
-                            "\nExpiry: " + expiryDate;
+                if (expiryDate != null && !expiryDate.isEmpty()) {
+                    ingredientInfo += "\nExpiry: " + expiryDate;
                 }
 
                 ingredientIds.add(id);
@@ -148,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (ingredientList.isEmpty()) {
-
                 ingredientList.add(
                         "Your pantry is empty. Add an ingredient!"
                 );
@@ -166,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         ingredientAdapter.notifyDataSetChanged();
     }
 
-    // Display options when an ingredient is selected
+    // Show options when an ingredient is selected
     private void showIngredientOptions(long ingredientId) {
 
         String[] options = {
@@ -181,32 +208,23 @@ public class MainActivity extends AppCompatActivity {
 
                     if (which == 0) {
 
-                        // Open existing ingredient for editing
                         Intent intent = new Intent(
                                 MainActivity.this,
                                 AddEditIngredientActivity.class
                         );
 
-                        intent.putExtra(
-                                "ingredient_id",
-                                ingredientId
-                        );
-
+                        intent.putExtra("ingredient_id", ingredientId);
                         startActivity(intent);
 
                     } else if (which == 1) {
 
-                        // Ask for confirmation before deleting
                         confirmDelete(ingredientId);
                     }
-
-                    // Cancel closes the dialog automatically
-
                 })
                 .show();
     }
 
-    // Confirm and delete selected ingredient
+    // Confirm before deleting an ingredient
     private void confirmDelete(long ingredientId) {
 
         new AlertDialog.Builder(this)
@@ -217,9 +235,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Delete", (dialog, which) -> {
 
                     int rowsDeleted =
-                            databaseHelper.deleteIngredient(
-                                    ingredientId
-                            );
+                            databaseHelper.deleteIngredient(ingredientId);
 
                     if (rowsDeleted > 0) {
 
@@ -243,6 +259,53 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .show();
     }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemId = item.getItemId();
+
+        if (itemId == R.id.menuPantry) {
+            loadIngredients();
+            return true;
+        }
+
+        if (itemId == R.id.menuAddIngredient) {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    AddEditIngredientActivity.class
+            );
+            startActivity(intent);
+            return true;
+        }
+
+        if (itemId == R.id.menuSuggestedRecipes) {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    SuggestedRecipesActivity.class
+            );
+            startActivity(intent);
+            return true;
+        }
+
+        if (itemId == R.id.menuSettings) {
+            Intent intent = new Intent(
+                    MainActivity.this,
+                    SettingsActivity.class
+            );
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
 
     @Override
     protected void onDestroy() {

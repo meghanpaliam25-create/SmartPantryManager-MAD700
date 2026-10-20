@@ -12,8 +12,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
@@ -27,11 +25,12 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
     private DatabaseHelper databaseHelper;
 
-    // -1 means we are adding a new ingredient
+    // -1 means a new ingredient is being added.
     private long ingredientId = -1;
 
     private final String[] units = {
             "Pieces",
+            "Slices",
             "Grams (g)",
             "Kilograms (kg)",
             "Millilitres (ml)",
@@ -46,7 +45,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_edit_ingredient);
 
-        // Connect XML components
+        // Connect the XML components.
         editIngredientName =
                 findViewById(R.id.editIngredientName);
 
@@ -67,7 +66,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         databaseHelper = new DatabaseHelper(this);
 
-        // Set up unit dropdown
+        // Set up the unit dropdown.
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_spinner_item,
@@ -80,41 +79,35 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         spinnerUnit.setAdapter(adapter);
 
-        // Check whether an ingredient ID was passed
+        // Check whether we are editing an existing ingredient.
         ingredientId = getIntent().getLongExtra(
-                "ingredient_id", -1
+                "ingredient_id",
+                -1
         );
 
         if (ingredientId != -1) {
-
-            // Editing an existing ingredient
             btnSaveIngredient.setText("Update Ingredient");
-
             loadIngredientDetails();
-
         } else {
-
-            // Adding a new ingredient
             btnSaveIngredient.setText("Save Ingredient");
         }
 
-        // Open calendar when expiry date is clicked
+        // Open the date picker.
         editExpiryDate.setOnClickListener(
                 v -> showDatePicker()
         );
 
-        // Save or update ingredient
+        // Save or update the ingredient.
         btnSaveIngredient.setOnClickListener(
                 v -> saveIngredient()
         );
 
-        // Cancel and return to pantry
+        // Cancel and return to the pantry.
         btnCancel.setOnClickListener(
                 v -> finish()
         );
     }
 
-    // Load existing ingredient information
     private void loadIngredientDetails() {
 
         try (Cursor cursor =
@@ -148,10 +141,10 @@ public class AddEditIngredientActivity extends AppCompatActivity {
                         expiryDate == null ? "" : expiryDate
                 );
 
-                // Select the previously saved unit
+                // Select the previously saved unit.
                 for (int i = 0; i < units.length; i++) {
 
-                    if (units[i].equals(unit)) {
+                    if (units[i].equalsIgnoreCase(unit)) {
                         spinnerUnit.setSelection(i);
                         break;
                     }
@@ -180,7 +173,6 @@ public class AddEditIngredientActivity extends AppCompatActivity {
         }
     }
 
-    // Save a new ingredient or update an existing one
     private void saveIngredient() {
 
         String name = editIngredientName.getText()
@@ -195,7 +187,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
         String expiryDate = editExpiryDate.getText()
                 .toString().trim();
 
-        // VALIDATION 1: Ingredient name cannot be empty
+        // Validate the ingredient name.
         if (name.isEmpty()) {
 
             editIngredientName.setError(
@@ -206,7 +198,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             return;
         }
 
-        // VALIDATION 2: Quantity cannot be empty
+        // Validate the quantity field.
         if (quantityText.isEmpty()) {
 
             editQuantity.setError(
@@ -217,13 +209,10 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             return;
         }
 
-        // VALIDATION 3: Quantity must be a number
         double quantity;
 
         try {
-
             quantity = Double.parseDouble(quantityText);
-
         } catch (NumberFormatException e) {
 
             editQuantity.setError(
@@ -234,7 +223,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             return;
         }
 
-        // VALIDATION 4: Quantity must be greater than zero
+        // Reject zero, negative and non-finite quantities.
         if (!Double.isFinite(quantity) || quantity <= 0) {
 
             editQuantity.setError(
@@ -245,49 +234,9 @@ public class AddEditIngredientActivity extends AppCompatActivity {
             return;
         }
 
-        // VALIDATION 5: Check expiry date if provided
-        if (!expiryDate.isEmpty()) {
-
-            SimpleDateFormat dateFormat =
-                    new SimpleDateFormat(
-                            "yyyy-MM-dd",
-                            Locale.US
-                    );
-
-            // Prevent invalid dates such as 2026-02-30
-            dateFormat.setLenient(false);
-
-            try {
-
-                java.util.Date parsedDate =
-                        dateFormat.parse(expiryDate);
-
-                if (parsedDate == null ||
-                        !dateFormat.format(parsedDate)
-                                .equals(expiryDate)) {
-
-                    editExpiryDate.setError(
-                            "Please select a valid expiry date"
-                    );
-
-                    editExpiryDate.requestFocus();
-                    return;
-                }
-
-            } catch (ParseException e) {
-
-                editExpiryDate.setError(
-                        "Please select a valid expiry date"
-                );
-
-                editExpiryDate.requestFocus();
-                return;
-            }
-        }
-
-        // CREATE: Save a new ingredient
         if (ingredientId == -1) {
 
+            // CREATE: Save a new ingredient.
             long result = databaseHelper.addIngredient(
                     name,
                     quantity,
@@ -316,7 +265,7 @@ public class AddEditIngredientActivity extends AppCompatActivity {
 
         } else {
 
-            // UPDATE: Edit an existing ingredient
+            // UPDATE: Edit an existing ingredient.
             int rowsUpdated = databaseHelper.updateIngredient(
                     ingredientId,
                     name,
@@ -346,39 +295,27 @@ public class AddEditIngredientActivity extends AppCompatActivity {
         }
     }
 
-    // Display calendar for selecting expiry date
     private void showDatePicker() {
 
         Calendar calendar = Calendar.getInstance();
 
-        // Use existing date when editing, if valid
+        // Use an existing expiry date if one is available.
         String existingDate = editExpiryDate.getText()
                 .toString().trim();
 
-        if (!existingDate.isEmpty()) {
-
-            SimpleDateFormat dateFormat =
-                    new SimpleDateFormat(
-                            "yyyy-MM-dd",
-                            Locale.US
-                    );
-
-            dateFormat.setLenient(false);
+        if (existingDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
 
             try {
+                String[] parts = existingDate.split("-");
 
-                java.util.Date parsedDate =
-                        dateFormat.parse(existingDate);
+                calendar.set(
+                        Integer.parseInt(parts[0]),
+                        Integer.parseInt(parts[1]) - 1,
+                        Integer.parseInt(parts[2])
+                );
 
-                if (parsedDate != null &&
-                        dateFormat.format(parsedDate)
-                                .equals(existingDate)) {
-
-                    calendar.setTime(parsedDate);
-                }
-
-            } catch (ParseException ignored) {
-                // Use today's date if the existing date is invalid
+            } catch (NumberFormatException ignored) {
+                // Use the current date instead.
             }
         }
 
